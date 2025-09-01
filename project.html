@@ -1,0 +1,491 @@
+I'll create a complete voice-based calculator application in a single HTML file. This will include speech recognition functionality, a modern UI with responsive design, and full calculator operations.
+
+
+1. Need to create a voice-controlled calculator with:
+   - Speech recognition (Web Speech API)
+   - Core calculator functions (+,-,*,/, etc.)
+   - Visual display of input and results
+   - Voice feedback for operations
+   - Responsive design that works on mobile/desktop
+
+2. Key features to implement:
+   - Start/stop voice recognition
+   - Display recognized speech
+   - Process math operations
+   - Show calculation history
+   - Visual animations for active states
+
+3. Will use:
+   - HTML/CSS for structure and styling
+   - JavaScript for logic and speech API
+   - Tailwind CSS for responsive design
+   - Web Speech API for voice input
+
+4. Design considerations:
+   - Clear visual hierarchy
+   - Large buttons for mobile
+   - Visual feedback for active voice state
+   - Dark/light mode toggle
+   - Accessible color contrast
+
+
+`voice-calculator.html`
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Based Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .listening {
+            animation: pulse 1.5s infinite;
+        }
+        
+        .history-item {
+            transition: all 0.3s ease;
+        }
+        
+        .history-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen transition-colors duration-300">
+    <div class="container mx-auto px-4 py-8 max-w-md">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">Voice Calculator</h1>
+            <button id="themeToggle" class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700">
+                <svg id="darkIcon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path>
+                </svg>
+                <svg id="lightIcon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden mb-6 transition-colors duration-300">
+            <!-- Display Area -->
+            <div class="p-4 text-right">
+                <div id="recognitionStatus" class="text-sm text-gray-500 dark:text-gray-400 mb-1"></div>
+                <div id="voiceInput" class="text-gray-400 dark:text-gray-500 italic text-sm min-h-5 mb-2"></div>
+                <div id="calculation" class="text-3xl font-semibold truncate">0</div>
+                <div id="result" class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1"></div>
+            </div>
+            
+            <!-- Voice Controls -->
+            <div class="flex justify-center mb-4">
+                <button id="startListening" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"></path>
+                    </svg>
+                    Speak Command
+                </button>
+            </div>
+            
+            <!-- Buttons -->
+            <div class="grid grid-cols-4 gap-1 p-2">
+                <button data-value="7" class="calc-btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">7</button>
+                <button data-value="8" class="calc-btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">8</button>
+                <button data-value="9" class="calc-btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">9</button>
+                <button data-value="+" class="calc-btn bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 dark:hover:bg-blue-700">+</button>
+                
+                <button data-value="4" class="calc-btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">4</button>
+                <button data-value="5" class="calc-btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">5</button>
+                <button data-value="6" class="calc-btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">6</button>
+                <button data-value="-" class="calc-btn bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 dark:hover:bg-blue-700">-</button>
+                
+                <button data-value="1" class="calc-btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">1</button>
+                <button data-value="2" class="calc-btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">2</button>
+                <button data-value="3" class="calc-btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">3</button>
+                <button data-value="*" class="calc-btn bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 dark:hover:bg-blue-700">×</button>
+                
+                <button data-value="0" class="calc-btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">0</button>
+                <button data-value="." class="calc-btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">.</button>
+                <button id="clear" class="bg-red-100 dark:bg-red-800 hover:bg-red-200 dark:hover:bg-red-700 rounded">C</button>
+                <button data-value="/" class="calc-btn bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 dark:hover:bg-blue-700">÷</button>
+                
+                <button id="equals" class="col-span-2 bg-green-100 dark:bg-green-800 hover:bg-green-200 dark:hover:bg-green-700 rounded">=</button>
+                <button id="backspace" class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded flex items-center justify-center">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0L4.586 11H17a1 1 0 110-2H4.586l3.707-3.707a1 1 0 00-1.414-1.414l-5 5a1 1 0 000 1.414l5 5a1 1 0 001.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <!-- History Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-colors duration-300">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="font-semibold">Calculation History</h2>
+            </div>
+            <div id="historyList" class="p-4 max-h-64 overflow-y-auto">
+                <!-- History items will be added here -->
+            </div>
+            <div class="p-2 border-t border-gray-200 dark:border-gray-700 text-center">
+                <button id="clearHistory" class="text-sm text-red-500 hover:text-red-700 dark:hover:text-red-400">Clear History</button>
+            </div>
+        </div>
+        
+        <!-- Help Section -->
+        <div class="mt-6 text-sm text-gray-600 dark:text-gray-400">
+            <h3 class="font-semibold mb-2">Voice Commands:</h3>
+            <ul class="list-disc pl-5 space-y-1">
+                <li>Say numbers (1, 2, 3...)</li>
+                <li>Operations (plus, minus, multiply, divide)</li>
+                <li>Equals or calculate (to get the result)</li>
+                <li>Clear (to reset)</li>
+                <li>Backspace (to delete last digit)</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const calculationDisplay = document.getElementById('calculation');
+            const resultDisplay = document.getElementById('result');
+            const voiceInputDisplay = document.getElementById('voiceInput');
+            const recognitionStatus = document.getElementById('recognitionStatus');
+            const startListeningBtn = document.getElementById('startListening');
+            const clearBtn = document.getElementById('clear');
+            const equalsBtn = document.getElementById('equals');
+            const backspaceBtn = document.getElementById('backspace');
+            const historyList = document.getElementById('historyList');
+            const clearHistoryBtn = document.getElementById('clearHistory');
+            const calcButtons = document.querySelectorAll('.calc-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const darkIcon = document.getElementById('darkIcon');
+            const lightIcon = document.getElementById('lightIcon');
+            
+            // Calculator state
+            let currentInput = '0';
+            let previousInput = '';
+            let operation = null;
+            let shouldResetInput = false;
+            let calculationHistory = [];
+            
+            // Speech recognition
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            let recognition;
+            
+            // Initialize speech recognition if available
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+                
+                recognition.onstart = () => {
+                    recognitionStatus.textContent = 'Listening...';
+                    startListeningBtn.classList.add('listening', 'bg-red-600', 'hover:bg-red-700');
+                    voiceInputDisplay.textContent = '';
+                };
+                
+                recognition.onerror = (event) => {
+                    recognitionStatus.textContent = `Error: ${event.error}`;
+                    startListeningBtn.classList.remove('listening', 'bg-red-600', 'hover:bg-red-700');
+                };
+                
+                recognition.onend = () => {
+                    if (!shouldResetInput) {
+                        recognitionStatus.textContent = 'Tap microphone to speak';
+                    }
+                    startListeningBtn.classList.remove('listening', 'bg-red-600', 'hover:bg-red-700');
+                };
+                
+                recognition.onresult = (event) => {
+                    const transcript = Array.from(event.results)
+                        .map(result => result[0])
+                        .map(result => result.transcript)
+                        .join('');
+                    
+                    voiceInputDisplay.textContent = transcript;
+                    
+                    if (event.results[0].isFinal) {
+                        processVoiceCommand(transcript.toLowerCase());
+                    }
+                };
+                
+                startListeningBtn.addEventListener('click', () => {
+                    try {
+                        recognition.start();
+                        voiceInputDisplay.textContent = '';
+                    } catch (e) {
+                        recognitionStatus.textContent = 'Error: Speech recognition not available';
+                    }
+                });
+            } else {
+                startListeningBtn.disabled = true;
+                recognitionStatus.textContent = 'Speech recognition not supported in this browser';
+            }
+            
+            // Process voice commands
+            function processVoiceCommand(command) {
+                if (command.includes('clear') || command.includes('reset')) {
+                    clearCalculator();
+                    updateDisplay();
+                    return;
+                }
+                
+                if (command.includes('delete') || command.includes('backspace')) {
+                    backspace();
+                    updateDisplay();
+                    return;
+                }
+                
+                if (command.includes('equals') || command.includes('equal') || command.includes('calculate')) {
+                    calculate();
+                    return;
+                }
+                
+                // Numbers
+                command = command.replace(/one/gi, '1');
+                command = command.replace(/two|too|to/gi, '2');
+                command = command.replace(/three/gi, '3');
+                command = command.replace(/four|for/gi, '4');
+                command = command.replace(/five/gi, '5');
+                command = command.replace(/six/gi, '6');
+                command = command.replace(/seven/gi, '7');
+                command = command.replace(/eight/gi, '8');
+                command = command.replace(/nine/gi, '9');
+                command = command.replace(/zero/gi, '0');
+                command = command.replace(/point/gi, '.');
+                
+                // Operations
+                command = command.replace(/plus/gi, '+');
+                command = command.replace(/minus/gi, '-');
+                command = command.replace(/times|multiply|multiplication|multiple/gi, '*');
+                command = command.replace(/divide|division/gi, '/');
+                
+                // Filter out non-math characters
+                const allowedChars = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '+', '-', '*', '/'];
+                let processedInput = '';
+                
+                for (let char of command) {
+                    if (allowedChars.includes(char)) {
+                        processedInput += char;
+                    }
+                }
+                
+                if (processedInput) {
+                    // Check if we're starting a new operation after a result
+                    if (shouldResetInput && !['+', '-', '*', '/'].includes(processedInput)) {
+                        currentInput = '0';
+                        shouldResetInput = false;
+                    }
+                    
+                    // Handle multiple operations in one command
+                    if (processedInput.length > 1) {
+                        evaluateFullExpression(processedInput);
+                    } else {
+                        // Handle single character
+                        if (['+', '-', '*', '/'].includes(processedInput)) {
+                            chooseOperation(processedInput);
+                        } else {
+                            appendNumber(processedInput);
+                        }
+                    }
+                    updateDisplay();
+                }
+            }
+            
+            // Evaluate expressions like "5+3*2"
+            function evaluateFullExpression(expression) {
+                try {
+                    // This is a simple evaluation, in a real app we'd want a more robust parser
+                    const result = eval(expression);
+                    updateResult(result.toString());
+                    addToHistory(`${expression} = ${result}`);
+                    shouldResetInput = true;
+                } catch (e) {
+                    recognitionStatus.textContent = "Couldn't understand the calculation";
+                }
+            }
+            
+            // Button click handlers
+            calcButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const value = button.dataset.value;
+                    
+                    if (shouldResetInput) {
+                        currentInput = '0';
+                        shouldResetInput = false;
+                    }
+                    
+                    if (['+', '-', '*', '/'].includes(value)) {
+                        chooseOperation(value);
+                    } else {
+                        appendNumber(value);
+                    }
+                    
+                    updateDisplay();
+                });
+            });
+            
+            clearBtn.addEventListener('click', () => {
+                clearCalculator();
+                updateDisplay();
+            });
+            
+            equalsBtn.addEventListener('click', () => {
+                calculate();
+            });
+            
+            backspaceBtn.addEventListener('click', () => {
+                backspace();
+                updateDisplay();
+            });
+            
+            clearHistoryBtn.addEventListener('click', () => {
+                calculationHistory = [];
+                historyList.innerHTML = '';
+            });
+            
+            // Calculator functions
+            function appendNumber(number) {
+                if (number === '.' && currentInput.includes('.')) return;
+                if (currentInput === '0' && number !== '.') {
+                    currentInput = number;
+                } else {
+                    currentInput += number;
+                }
+            }
+            
+            function chooseOperation(op) {
+                if (currentInput === '') return;
+                if (previousInput !== '') {
+                    calculate();
+                }
+                operation = op;
+                previousInput = currentInput;
+                currentInput = '';
+            }
+            
+            function calculate() {
+                let computation;
+                const prev = parseFloat(previousInput);
+                const current = parseFloat(currentInput);
+                
+                if (isNaN(prev) || isNaN(current)) return;
+                
+                switch (operation) {
+                    case '+':
+                        computation = prev + current;
+                        break;
+                    case '-':
+                        computation = prev - current;
+                        break;
+                    case '*':
+                        computation = prev * current;
+                        break;
+                    case '/':
+                        computation = prev / current;
+                        break;
+                    default:
+                        return;
+                }
+                
+                updateResult(computation.toString());
+                operation = null;
+                previousInput = '';
+                shouldResetInput = true;
+            }
+            
+            function updateResult(result) {
+                currentInput = result;
+                const displayText = `${previousInput} ${operation || ''} ${currentInput}`;
+                addToHistory(`${previousInput} ${operation} ${currentInput} = ${result}`);
+                resultDisplay.textContent = result;
+            }
+            
+            function backspace() {
+                if (currentInput.length === 1) {
+                    currentInput = '0';
+                } else {
+                    currentInput = currentInput.slice(0, -1);
+                }
+            }
+            
+            function clearCalculator() {
+                currentInput = '0';
+                previousInput = '';
+                operation = null;
+                resultDisplay.textContent = '';
+            }
+            
+            function updateDisplay() {
+                calculationDisplay.textContent = currentInput;
+            }
+            
+            function addToHistory(entry) {
+                calculationHistory.unshift(entry);
+                updateHistoryDisplay();
+            }
+            
+            function updateHistoryDisplay() {
+                historyList.innerHTML = '';
+                calculationHistory.slice(0, 10).forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'history-item py-2 px-3 mb-1 rounded cursor-pointer';
+                    div.textContent = item;
+                    div.addEventListener('click', () => {
+                        // When history item is clicked, parse the expression before the equals
+                        const expression = item.split('=')[0].trim();
+                        if (expression) {
+                            previousInput = '';
+                            operation = null;
+                            currentInput = '0';
+                            evaluation = eval(expression).toString();
+                            currentInput = evaluation;
+                            updateDisplay();
+                            resultDisplay.textContent = evaluation;
+                        }
+                    });
+                    historyList.appendChild(div);
+                });
+            }
+            
+            // Theme toggle
+            themeToggle.addEventListener('click', () => {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                    darkIcon.classList.add('hidden');
+                    lightIcon.classList.remove('hidden');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                    lightIcon.classList.add('hidden');
+                    darkIcon.classList.remove('hidden');
+                }
+            });
+            
+            // Check for saved theme preference
+            if (localStorage.getItem('theme') === 'dark' || 
+                (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                lightIcon.classList.add('hidden');
+                darkIcon.classList.remove('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                darkIcon.classList.add('hidden');
+                lightIcon.classList.remove('hidden');
+            }
+            
+            // Initialize display
+            updateDisplay();
+        });
+    </script>
+</body>
+</html>
+
+```
